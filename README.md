@@ -4,3 +4,9 @@ Recommendation Model for Spotify Million Playlist Dataset challenge. This is the
 ## Dataset
 
 [Spotify Million Playlist Dataset Challenge](https://www.aicrowd.com/challenges/spotify-million-playlist-dataset-challenge)
+
+### Pre-processing
+1. Install packages from requirements.txt
+2. Run `py pre_processing.py [directory of dataset] [directory of generated df]`
+   
+   *Note: it takes around 10 min to run and the peak memory usage is ~6GB* 
