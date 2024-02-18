@@ -4,6 +4,10 @@ import os
 from tqdm import tqdm
 import argparse
 
+TRACKS_DF_FILENAME = "tracks_df.csv"
+PLAYLISTS_DF_FILENAME = "playlists_df.csv"
+PLAYLIST_TRACKS_DF_FILENAME = "playlist_tracks_df.csv"
+
 
 playlists_df_list, tracks_df_list = [], []
 track_uri_to_id = {}
@@ -190,8 +194,8 @@ def pre_process_dataset(path, new_path):
     del tracks_df_list
     playlists_df = pd.DataFrame.from_dict(playlists_df_list)
     del playlists_df_list
-    tracks_df.to_csv(os.sep.join((new_path, "tracks_df.csv")), index=False)
-    playlists_df.to_csv(os.sep.join((new_path, "playlists_df.csv")),
+    tracks_df.to_csv(os.sep.join((new_path, TRACKS_DF_FILENAME)), index=False)
+    playlists_df.to_csv(os.sep.join((new_path, PLAYLISTS_DF_FILENAME)),
                         index=False)
 
     # generate playlist_tracks_df
@@ -201,8 +205,48 @@ def pre_process_dataset(path, new_path):
             playlists_df["tracks"].apply(len))
     })
     playlist_tracks_df.to_csv(os.sep.join((new_path,
-                                           "playlist_tracks_df.csv")),
+                                           PLAYLIST_TRACKS_DF_FILENAME)),
                               index=False)
+
+
+def read_pre_processed_data(data_path):
+    """Read the pre-processed MPD data into dataframes.
+
+    Args:
+        data_path (str): A path to the directory that contains the pre-processed
+            MPD data CSVs.
+    
+    Returns:
+        A tuple of three dataframes of the respective playlists data, tracks data,
+        and playlists/tracks relations data.
+    
+    Raises:
+        ValueError if data_path or any contained files does not exist or is invalid.
+    """
+    if not os.path.exists(data_path):
+        raise ValueError(f"Data path {data_path} does not exist.")
+    
+    if not os.path.isdir(data_path):
+        raise ValueError(f"Data path {data_path} must be a directory.")
+    
+    playlists_filename = os.path.join(data_path, PLAYLISTS_DF_FILENAME)
+    tracks_filename = os.path.join(data_path, TRACKS_DF_FILENAME)
+    playlists_tracks_filename = os.path.join(data_path, PLAYLIST_TRACKS_DF_FILENAME)
+    
+    if not os.path.isfile(playlists_filename):
+        raise ValueError(f"Playlists filename {playlists_filename} must exist.")
+    
+    if not os.path.isfile(tracks_filename):
+        raise ValueError(f"Playlists filename {tracks_filename} must exist.")
+    
+    if not os.path.isfile(playlists_tracks_filename):
+        raise ValueError(f"Playlists filename {playlists_tracks_filename} must exist.")
+
+    playlists_df = pd.read_csv(playlists_filename)
+    tracks_df = pd.read_csv(tracks_filename)
+    playlists_tracks_df = pd.read_csv(playlists_tracks_filename)
+
+    return playlists_df, tracks_df, playlists_tracks_df
 
 
 if __name__ == "__main__":
