@@ -4,20 +4,6 @@ import os
 from dotenv import load_dotenv
 
 
-def get_topn_col(df, col, n):
-    """Returns the top n counts of unique values for given column in a dataframe.
-
-    Args:
-        df (pd.DataFrame): A pandas DataFrame of the data.
-        col (str): The name of the column to determine the value counts for.
-        n (int): The top n values to return.
-
-    Returns:
-        A pandas Series of the top n unique values with their associated counts.
-    """
-    return df[col].value_counts()[:n]
-
-
 def get_info(uri, uri_type):
     '''
     Extracts information about Spotify track(s)/artist(s)/album(s)
