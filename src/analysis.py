@@ -19,7 +19,7 @@ def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10):
     cols = ["track_name", "artist_name"]
     num_occurrences_df = playlist_tracks_df.value_counts("track_id").to_frame()
     df = tracks_df[cols + ["track_id"]].join(num_occurrences_df).sort_values("count", ascending=False)
-    return df[:10]
+    return df[:n]
 
 
 if __name__ == "__main__":
