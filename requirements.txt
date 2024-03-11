@@ -6,3 +6,5 @@ python-dotenv
 seaborn
 spotipy
 tqdm
+wordcloud
+pillow
