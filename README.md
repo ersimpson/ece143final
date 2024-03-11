@@ -32,12 +32,21 @@ We considered two major forms of analysis in investigation of the dataset:
 1. Basic Descriptive Statistics (Tracks, Playlists, Artists, Albums, etc.)
 2. Clustering Analysis with Text
 
-The basic descriptive statistics include results such as the most popular tracks, artists, albums, etc. as well as some more detailed statistics such as the distribution of playlist lengths. Effectively, this analysis provides a high-level overview of the dataset.
+The basic descriptive statistics include results such as the most popular tracks, artists, albums, etc. as well as some more detailed statistics such as the distribution of playlist lengths. Effectively, this analysis provides a high-level overview of the dataset and serves as a starting point to guide us in asking more interesting and pointed questions about the nature of certain features in the dataset.
 
 On the other hand, the clustering analysis attempts to group playlists and tracks based on their textual data in the anticipation that certain genres or themes for playlists emerge.
 
-#### Viewing the Analysis
+#### Viewing the Analysis (Basic Descriptive Statistics)
 
 *Note: the pre-processing step must be completed before running the analysis*
 
-1. Run `python3 analysis.py [directory of pre processed data]`.
+1. Run `python3 analysis.py [directory of pre processed data] -N 10`.
+
+These will produce bar plots to answer the following questions:
+
+- What are the most popular tracks across all playlists?
+- What are the most popular artists across all playlists?
+- What are the most popular albums across all playlists?
+- What artists are the most prolific in terms of number of tracks?
+- What artists are the most prolific in terms of number of albums?
+- What albums contain the most tracks?
