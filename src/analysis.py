@@ -28,6 +28,56 @@ def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10):
     return df[["track_name", "count"]].sort_values("count", ascending=False)[:n]
 
 
+def get_most_common_artists(tracks_df, playlist_tracks_df, n=10):
+    """Get the artists that have the most unique inclusions across all playlists.
+
+    A unique inclusion deduplicates an artist that has been added multiple
+    times to a playlist via multiple different tracks.
+
+    Args:
+        track_df (DataFrame): A DataFrame of the unique tracks data.
+        playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
+            associations.
+        n (int): The number of artists to include in the returning DataFrame.
+
+    Returns:
+        A DataFrame of the most common artists.
+    """
+    assert isinstance(tracks_df, pd.DataFrame)
+    assert isinstance(playlist_tracks_df, pd.DataFrame)
+    assert isinstance(n, int)
+    assert n > 0
+    df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["artist_uri", "artist_name"]], on="track_id")
+    artists_df = df[["pid", "artist_uri", "artist_name"]].drop_duplicates()
+    artists_df = artists_df.value_counts(["artist_uri", "artist_name"]).to_frame().reset_index()
+    return artists_df[["artist_name", "count"]].set_index("artist_name").sort_values("count", ascending=False)[:n]
+
+
+def get_most_common_albums(tracks_df, playlist_tracks_df, n=10):
+    """Get the albums that have the most unique inclusions across all playlists.
+
+    A unique inclusion deduplicates an album that has been added multiple
+    times to a playlist via multiple different tracks.
+
+    Args:
+        track_df (DataFrame): A DataFrame of the unique tracks data.
+        playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
+            associations.
+        n (int): The number of albums to include in the returning DataFrame.
+
+    Returns:
+        A DataFrame of the most common albums.
+    """
+    assert isinstance(tracks_df, pd.DataFrame)
+    assert isinstance(playlist_tracks_df, pd.DataFrame)
+    assert isinstance(n, int)
+    assert n > 0
+    df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["album_uri", "album_name"]], on="track_id")
+    artists_df = df[["pid", "album_uri", "album_name"]].drop_duplicates()
+    artists_df = artists_df.value_counts(["album_uri", "album_name"]).to_frame().reset_index()
+    return artists_df[["album_name", "count"]].set_index("album_name").sort_values("count", ascending=False)[:n]
+
+
 def get_largest_albums(tracks_df, playlist_tracks_df, n=10):
     """Get the albums with the most amount of unique tracks.
 
@@ -174,14 +224,24 @@ if __name__ == "__main__":
     # Plot top N tracks
     print(f"Plotting top {N} most common tracks...")
     top_N_tracks = get_most_common_tracks(tracks_df, playlist_tracks_df, n=N)
-    save_bar_plot(f"top{N}_tracks.png", top_N_tracks, x="track_name", y="count", title=f"Top {N} Most Common Tracks")
+    save_bar_plot(f"top{N}_tracks.png", top_N_tracks, x="track_name", y="count", title=f"Top {N} Most Common Tracks", orient="h")
+
+    # Plot top N artists
+    print(f"Plotting top {N} most common artists...")
+    top_N_artists = get_most_common_artists(tracks_df, playlist_tracks_df, n=N)
+    save_bar_plot(f"top{N}_artists.png", top_N_artists, x="artist_name", y="count", title=f"Top {N} Most Common Artists", orient="h")
+
+    # Plot top N albums
+    print(f"Plotting top {N} most common albums...")
+    top_N_albums = get_most_common_albums(tracks_df, playlist_tracks_df, n=N)
+    save_bar_plot(f"top{N}_albums.png", top_N_albums, x="album_name", y="count", title=f"Top {N} Most Common Albums", orient="h")
 
     # Plot top N prolific artists
     print(f"Plotting top {N} most prolific artists...")
     top_N_prolific_artists = get_most_prolific_artists(tracks_df, playlist_tracks_df, n=N)
-    save_bar_plot(f"top{N}_prolific_artists.png", top_N_prolific_artists, x="artist_name", y="count", title=f"Top {N} Most Prolific Artists")
+    save_bar_plot(f"top{N}_prolific_artists.png", top_N_prolific_artists, x="artist_name", y="count", title=f"Top {N} Most Prolific Artists", orient="h")
 
     # Plot top N largest albums
     print(f"Plotting top {N} largest albums...")
     top_N_largest_albums = get_largest_albums(tracks_df, playlist_tracks_df, n=N)
-    save_bar_plot(f"top{N}_largest_albums.png", top_N_largest_albums, x="album_name", y="count", title=f"Top {N} Largest Albums Tracks")
+    save_bar_plot(f"top{N}_largest_albums.png", top_N_largest_albums, x="album_name", y="count", title=f"Top {N} Largest Albums", orient="h")
