@@ -3,6 +3,29 @@ import pandas as pd
 import seaborn as sns
 
 
+def save_audio_features_hist(filename, audio_df, x, title):
+    """Create a histogram of audio characteristics data for track information
+    and save to disk as png.
+
+    Args:
+        filename (str): The filename of the plot image to save.
+        audio_df (DataFrame): A DataFrame of the audio characteristics data to 
+            plot as a histogram.
+        x (str): The column name or index of the DataFrame to group x axis
+            values in the plot by.
+        title (str): The title of the overall plot.
+    
+    Returns:
+        None
+    """
+    with sns.axes_style("whitegrid"):
+        ax = sns.histplot(audio_df, x=x, hue="label", stat="density", common_norm=False)
+        ax.set_title(title)
+        sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))  
+        plt.savefig(filename, bbox_inches="tight")
+        plt.close()
+
+
 def save_bar_plot(filename, df, x, y, title, orient="v", save = "y"):
     """Create a bar plot from a dataframe and save to disk as a png.
 

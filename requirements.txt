@@ -3,6 +3,7 @@ numpy
 pandas
 python-dotenv
 seaborn
+scikit-learn
 spotipy
 tqdm
 wordcloud

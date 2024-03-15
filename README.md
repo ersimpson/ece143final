@@ -1,9 +1,26 @@
 # ece143final
-Recommendation Model for Spotify Million Playlist Dataset challenge. This is the codebase for the Winter 2024 ECE 143 Final Project for Group 10.
+Recommendation Model for Spotify Million Playlist Dataset challenge. This is the codebase for the Winter 2024 ECE 143 Final Project for Group 10
 
 ## Dataset
 
 [Spotify Million Playlist Dataset Challenge](https://www.aicrowd.com/challenges/spotify-million-playlist-dataset-challenge)
+
+### File Structure
+```
+.
+├── data/
+├── src/
+│   ├── EDA.ipynb [Main Visualizations]
+│   ├── analysis.py [Basic descriptive statistics]
+│   ├── collaborative_stats.py
+│   ├── plots.py
+│   ├── pre_processing.py 
+│   ├── recommend_tracks.py
+│   └── utils.py [Spotify API]
+├── requirements.txt 
+└── README.md
+```
+
 
 ### Pre-processing
 1. Create and activate virtual environment.
@@ -18,7 +35,13 @@ Recommendation Model for Spotify Million Playlist Dataset challenge. This is the
    
    *Note: it takes around 10 min to run and the peak memory usage is ~6GB* 
 
-### Utils.py Usage
+### Generate Visualizations
+1. Run `jupyter notebook`
+2. Open `EDA.ipynb`
+3. Run all cells
+
+
+### `utils.py` Usage
 1. Create a Spotify developer account
 2. Create a new app, copy the Client ID and Client Secret
 3. In ".env", store these credentials
@@ -68,3 +91,16 @@ This will recommend N songs from the same K-means cluster as the current song.
 2. Run `python3 recommend_tracks.py [current_song] --dir [directory of pre processed data] -N 10 --playlist_id <value>`.
 
 This will recommend N songs from the given playlist based on cosine similarity.
+
+### Third Party Packages
+```
+jupyter
+numpy
+pandas
+pillow
+python-dotenv
+seaborn
+spotipy
+tqdm
+wordcloud
+```
