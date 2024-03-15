@@ -171,6 +171,9 @@ def get_track_durations_stdev_distribution(tracks_df, playlist_tracks_df):
     # caculate the standard deviation of duration_s in each playlist
     duration_s_stdevs = playlist_tracks_df.groupby('pid').progress_apply(lambda x: np.std(x.duration_s))
 
+    # remove track duration column
+    del playlist_tracks_df['duration_s']
+
     return duration_s_stdevs
 
 
@@ -191,6 +194,7 @@ def get_artist_diversity_distribution(tracks_df, playlist_tracks_df):
     assert isinstance(tracks_df, pd.DataFrame)
     assert isinstance(playlist_tracks_df, pd.DataFrame)
 
+    tqdm.pandas()
     # cache the durations into a list for faster access
     track_artist_map = list(tracks_df.artist_name)
 
@@ -199,6 +203,9 @@ def get_artist_diversity_distribution(tracks_df, playlist_tracks_df):
 
     # caculate the artist diversity of each playlist
     artist_diversity = playlist_tracks_df.groupby('pid').progress_apply(lambda x: x['artist_name'].nunique() / len(x['track_id']))
+
+    # remove track artist name column
+    del playlist_tracks_df['artist_name']
 
     return artist_diversity
 
