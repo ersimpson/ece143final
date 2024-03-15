@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 from analysis import *
 import time
+import argparse
 
 def get_time():
     '''Get the current time in a readable format
@@ -117,70 +118,48 @@ def fetch_audio_features(sp, tracks_info):
         
     return df_audio_features
 
-def tracks_similarity_in_playlists(track_audio_features,current_song,plot=False):
-    """Get tracks similarity in the playlist
-
-    Args:
-        current_song : The name of the song to compare with the playlist.
-        track_audio_features (DataFrame): A DataFrame of the audio features for the tracks in the playlist.
-        plot (bool): A flag to indicate whether to plot the cosine similarity matrix.
-
-    Returns:
-        A DataFrame of the cosine similarity of the given song with all other songs in the playlist.
-    """
-    assert isinstance(track_audio_features, pd.DataFrame)
-    assert isinstance(current_song, str)
-    assert isinstance(plot, bool)
-    assert 'track_name' in track_audio_features.columns
-
-    song = track_audio_features[track_audio_features['track_name'] == current_song]
-    song = song.drop('track_name', axis=1)
+def reccomended_track_similarity(cluster_tracks_df,recommended_tracks,current_song_id,plot=True):
+    song = cluster_tracks_df[cluster_tracks_df['id'] == current_song_id].drop('id', axis=1)
+    track_audio_features = cluster_tracks_df[cluster_tracks_df['id'].isin(recommended_tracks['id'])].drop('id', axis=1).drop_duplicates()
     song = song.to_numpy()
     song = song[0]
+    track_audio_features = track_audio_features.to_numpy()
 
-    track_audio_features_modified = track_audio_features
-    track_audio_features_modified = track_audio_features_modified.drop('track_name', axis=1)
+    cos_sim = cosine_similarity([song], track_audio_features)
 
-    track_audio_features_modified = track_audio_features_modified.to_numpy()
-
-    cos_sim = cosine_similarity([song], track_audio_features_modified)
-    if plot == False:
-        return cos_sim
-    
-    plt.figure(figsize=(20, 1))
-    sns.heatmap(cos_sim, cmap='coolwarm', annot=True)
-    plt.title(f'Cosine Similarity Matrix of song "{current_song}" with all other songs in the playlist')
-    plt.show()
+    if plot :
+        plt.figure(figsize=(20, 1))
+        sns.heatmap(cos_sim, cmap='coolwarm', annot=True,) # annotate the v
+        plt.title(f'Cosine Similarity Matrix of song {current_song_id} with all other songs in the playlist')
+        plt.show()
     return cos_sim
 
-def next_song_from_playlist(track_audio_features, current_song):
+def next_song_from_playlist(tracks_df,cluster_tracks_df,track_audio_features, current_song_id,N=10):
     """Get the next song from the playlist
 
     Args:
-        current_song : The name of the song to compare with the playlist.
+        current_song_id : The id of the song to compare with the playlist.
         track_audio_features (DataFrame): A DataFrame of the audio features for the tracks in the playlist.
 
     Returns:
         A DataFrame of the next song from the playlist based in similarity with current song.
     """
-    cos_sim = tracks_similarity_in_playlists(track_audio_features, current_song, plot = False)[0]
-    similarity_index = sorted(cos_sim)[-11:][::-1]
-    top_10_similar_songs = cos_sim.argsort()[-11:][::-1]
-    top_10_similar_songs = top_10_similar_songs.tolist()
+    cos_sim = reccomended_track_similarity(cluster_tracks_df,track_audio_features, current_song_id, plot = False)[0]
+    similarity_index = sorted(cos_sim)[-N:][::-1]
+    top_similar_songs = cos_sim.argsort()[-N:][::-1]
+    top_similar_songs = top_similar_songs.tolist()
     track_audio_features = track_audio_features.to_numpy()
 
     similar_songs = []
-    for song in top_10_similar_songs:
+    for song in top_similar_songs:
         similar_songs.append(track_audio_features[song][0])
 
     similar_songs = np.array(similar_songs)
 
     recommended_tracks = pd.DataFrame({
-        'track_name': similar_songs[1:],
-        'similarity_ratio': similarity_index[1:]
+        'id': similar_songs,
+        'track_name' : tracks_df[tracks_df['id'].isin(similar_songs)]['track_name'],
     })
-
-
     return recommended_tracks
 
 def playlist_track_features(tracks_df, playlist_tracks_df, playlist_id):
@@ -202,6 +181,8 @@ def playlist_track_features(tracks_df, playlist_tracks_df, playlist_id):
     track_info = get_track_info(tracks_df, playlist_tracks)
     sp = spotipy_authenticate()
     track_audio_features = fetch_audio_features(sp, track_info)
+    track_audio_features.reset_index(inplace=True)
+    track_audio_features.rename(columns={'track_id':'id'}, inplace=True)
     return track_audio_features
 
 def get_track_features(sp,tracks_df,save_df=False):
@@ -282,10 +263,9 @@ def get_recommendation_from_cluster(cluster_tracks_df,tracks_df,track_id, N=10):
     Returns:
         A DataFrame of the recommended songs.
     '''
-    print(f"{N} track recommendations for track name: ",tracks_df[tracks_df['id'] == track_id]['track_name'].values[0])
     cluster = get_song_cluster(cluster_tracks_df,track_id)
     recommended_songs = cluster_tracks_df[cluster_tracks_df['cluster'] == cluster]
-    return get_song_name(tracks_df,recommended_songs.sample(N))
+    return get_song_name(tracks_df,recommended_songs.sample(N))[['id','track_name']]
 
 def get_song_name(tracks_df,recommended_tracks):
     '''
@@ -298,3 +278,47 @@ def get_song_name(tracks_df,recommended_tracks):
     '''
     filtered_tracks = tracks_df[tracks_df['id'].isin(recommended_tracks['id'])]
     return filtered_tracks[['track_name','id']]
+
+
+if __name__ == "__main__":
+
+    # argparse to take song id as input
+    parser = argparse.ArgumentParser(description='Get the next song based on the current song')
+    parser.add_argument('current_song_id', type=str, help='The id of the song')
+    # flag to fetch track features 
+    parser.add_argument('--dir', type=str, default='../data/', help='The directory of the data')
+    parser.add_argument('--create_tracks_feature', action='store_true', help='Create dataframe of the tracks features')
+    parser.add_argument('--create_cluster', action='store_true', help='Create cluster of the tracks')
+    parser.add_argument('--N', type=int, default=10, help='The number of songs to recommend')
+    parser.add_argument('--playlist_id', type=int, default=0, help='The id of the playlist')
+
+    args = parser.parse_args()
+    current_song_id = args.current_song_id
+    create_cluster = args.create_cluster
+    create_tracks_feature = args.create_tracks_feature
+    N = args.N
+    playlist_id = args.playlist_id
+    dir = args.dir
+
+    playlist_df, tracks_df, playlist_tracks_df = read_pre_processed_data(dir)
+    tracks_df['id'] = tracks_df['track_uri'].apply(lambda x: x.split(':')[-1])
+
+    if create_cluster : 
+        if create_tracks_feature : 
+            tracks_feature_df = get_track_features_in_chunks(tracks_df,chunk_size=100,save=True)
+        else : tracks_feature_df = pd.read_csv('../data/tracks_features.csv',header=0)
+        cluster_tracks_df = clustering_tracks(tracks_feature_df)
+    else : 
+        cluster_tracks_df = pd.read_csv('../data/tracks_cluster.csv',header=0)
+
+    print(f"{N} track recommendations for track name: ",tracks_df[tracks_df['id'] == current_song_id]['track_name'].values[0])
+    if playlist_id : 
+        # Reccommend next song to the song from playlist
+        track_audio_features = playlist_track_features(tracks_df, playlist_tracks_df, playlist_id)
+        recommended_tracks = next_song_from_playlist(tracks_df,cluster_tracks_df,track_audio_features, current_song_id, N=N)
+
+    else : 
+        # Reccommend next song to the song from tracks_df
+        recommended_tracks = get_recommendation_from_cluster(cluster_tracks_df,tracks_df,current_song_id, N=N)
+
+    print(recommended_tracks.to_string(index=False))

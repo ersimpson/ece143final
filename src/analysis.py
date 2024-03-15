@@ -313,6 +313,50 @@ def get_most_popular_one_hit_wonder(tracks_df, playlist_tracks_df, n=10):
     return top_n_one_hit_wonders
 
 
+def get_popular_artist_cnt(tracks_df, playlist_tracks_df, n=100):
+    """
+    Find the number of top-n common artists in each playlist.
+
+    Args:
+        tracks_df (DataFrame): DataFrame of the unique tracks data.
+        playlist_tracks_df (DataFrame): DataFrame of the playlist and track id associations.
+        n(int): Top N most common artists would be considered as popular.
+
+    Returns:
+        pd.Series: A series of count of top-n common artists where each entry corresponds to a playlist.
+    """
+    assert isinstance(tracks_df, pd.DataFrame)
+    assert isinstance(playlist_tracks_df, pd.DataFrame)
+    assert isinstance(n, int)
+    assert n > 0
+
+    top_n_artists = get_most_common_artists(tracks_df, playlist_tracks_df, n)
+
+    df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["artist_name"]], on="track_id")
+
+    def cnt(playlist):
+        """Given a playlist, count the number of top-n artists in this playlist.
+
+        Args:
+            playlist (DataFrame): DataFrame of a playlist with artist names
+
+        Returns:
+            int: The number of top-n artists in this playlist.
+        """
+        assert isinstance(playlist, pd.DataFrame)
+
+        ans = 0
+        for artist in playlist.artist_name.unique():
+            if artist in top_n_artists.index:
+                ans += 1
+        return ans
+
+    # calculate the number of top 100 artists in a playlist
+    top_n_artists_cnt = df.groupby('pid').progress_apply(lambda playlist: cnt(playlist))
+
+    return top_n_artists_cnt
+
+
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument(
