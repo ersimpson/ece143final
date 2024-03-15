@@ -96,7 +96,7 @@ def fetch_audio_features(sp, tracks_info):
     audio_features = []
     
     while index < playlist.shape[0]:
-        audio_features += sp.audio_features(playlist.iloc[index:index + 50, 0])
+        audio_features += sp.audio_features(playlist.iloc[index:index + 50]["track_uri"])
         index += 50
     
     features_list = []

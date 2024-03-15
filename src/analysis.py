@@ -3,77 +3,29 @@ import sys
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
-from spotipy.oauth2 import SpotifyClientCredentials
-import spotipy
 
 from pre_processing import read_pre_processed_data
 from plots import save_bar_plot
+from utils import get_spotipy_client
+from recommend_track import fetch_audio_features
 
 
 def get_tracks_audio_features(tracks_df, client_id=None, client_secret=None):
-    """
-    """
-    if client_id is None and client_secret is None:
-        # load credentials from the .env file
-        assert load_dotenv(), "no enviromental variables found!"
-        client_id = os.environ["SPOTIFY_CLIENT_ID"]
-        client_secret = os.environ["SPOTIFY_CLIENT_SECRET"]
+    """Get audio features for the given tracks.
 
-    sp = spotipy.Spotify(
-        auth_manager=SpotifyClientCredentials(
-            client_id=client_id,
-            client_secret=client_secret,
-        ),
-    )
+    Args:
+        sp (SpotifyClientCredentials): The Spotify API object.
+        tracks_info (DataFrame): A DataFrame of the unique tracks data.
+        client_id (str): The client id to connect to the Spotify API with.
+        client_secret (str): The client secret to connect to the Spotify API with.
+
+    Returns:
+        A DataFrame of the audio features for the tracks in the tracks_info.
+    """
+    sp = get_spotipy_client(client_id, client_secret)
     tracks_df["track_id"] = tracks_df["track_uri"].apply(lambda x: x.split(":")[-1])
     tracks_df = tracks_df.reset_index().drop("index", axis=1)
     return fetch_audio_features(sp, tracks_df)
-
-
-def fetch_audio_features(sp, tracks_name_df):
-    """
-    """
-    playlist = tracks_name_df
-    index = 0
-    audio_features = []
-    
-    while index < playlist.shape[0]:
-        audio_features += sp.audio_features(playlist.iloc[index:index + 50]["track_uri"])
-        index += 50
-
-    features_list = []
-    for features in audio_features:
-        features_list.append([
-            features["id"],
-            tracks_name_df[tracks_name_df["track_id"] == features["id"]]["track_name"].values[0],
-            features["danceability"],
-            features["energy"],
-            features["tempo"],
-            features["loudness"],
-            features["valence"],
-            features["speechiness"],
-            features["instrumentalness"],
-            features["liveness"],
-            features["acousticness"],
-        ])
-    
-    df_audio_features = pd.DataFrame(
-        features_list,
-        columns=[
-            "track_id",
-            "track_name",
-            "danceability",
-            "energy",
-            "tempo",
-            "loudness",
-            "valence",
-            "speechiness",
-            "instrumentalness",
-            "liveness",
-            "acousticness",
-        ])
-    df_audio_features.set_index("track_id", inplace=True, drop=True)
-    return df_audio_features
 
 
 def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10, ascending=False):
