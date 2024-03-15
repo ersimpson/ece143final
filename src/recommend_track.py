@@ -10,6 +10,7 @@ import os
 from analysis import *
 import time
 import argparse
+from sklearn.metrics import davies_bouldin_score, silhouette_score, calinski_harabasz_score
 
 def get_time():
     '''Get the current time in a readable format
@@ -118,7 +119,7 @@ def fetch_audio_features(sp, tracks_info):
         
     return df_audio_features
 
-def reccomended_track_similarity(cluster_tracks_df,recommended_tracks,current_song_id,plot=True):
+def reccomended_track_similarity(tracks_df,cluster_tracks_df,recommended_tracks,current_song_id,plot=True):
     song = cluster_tracks_df[cluster_tracks_df['id'] == current_song_id].drop('id', axis=1)
     track_audio_features = cluster_tracks_df[cluster_tracks_df['id'].isin(recommended_tracks['id'])].drop('id', axis=1).drop_duplicates()
     song = song.to_numpy()
@@ -129,8 +130,9 @@ def reccomended_track_similarity(cluster_tracks_df,recommended_tracks,current_so
 
     if plot :
         plt.figure(figsize=(20, 1))
-        sns.heatmap(cos_sim, cmap='coolwarm', annot=True,) # annotate the v
-        plt.title(f'Cosine Similarity Matrix of song {current_song_id} with all other songs in the playlist')
+        sns.heatmap(cos_sim, cmap='coolwarm', annot=True,) 
+        current_song = recommended_tracks[recommended_tracks['id'] == current_song_id]['track_name'].values[0]
+        plt.title(f'Cosine Similarity Matrix of song {current_song} with all other songs in the playlist')
         plt.show()
     return cos_sim
 
@@ -144,7 +146,7 @@ def next_song_from_playlist(tracks_df,cluster_tracks_df,track_audio_features, cu
     Returns:
         A DataFrame of the next song from the playlist based in similarity with current song.
     """
-    cos_sim = reccomended_track_similarity(cluster_tracks_df,track_audio_features, current_song_id, plot = False)[0]
+    cos_sim = reccomended_track_similarity(tracks_df,cluster_tracks_df,track_audio_features, current_song_id, plot = False)[0]
     similarity_index = sorted(cos_sim)[-N:][::-1]
     top_similar_songs = cos_sim.argsort()[-N:][::-1]
     top_similar_songs = top_similar_songs.tolist()
@@ -222,7 +224,7 @@ def get_track_features_in_chunks(tracks_df,chunk_size=100):
         
     return track_features
 
-def clustering_tracks(tracks_df):
+def clustering_tracks(tracks_df,k=10):
     '''Cluster the tracks in the tracks_df DataFrame
     Args:
         tracks_df (DataFrame): A DataFrame of the unique tracks data.
@@ -236,7 +238,7 @@ def clustering_tracks(tracks_df):
     # load the data from ../data/tracks_features.csv
     scaler = StandardScaler()
     tracks_df_scaled = scaler.fit_transform(tracks_df.drop("id", axis=1))
-    kmeans = KMeans(n_clusters=10, random_state=42)
+    kmeans = KMeans(n_clusters=k, random_state=42)
     kmeans.fit(tracks_df_scaled)
     tracks_df['cluster'] = kmeans.labels_
     return tracks_df
@@ -279,12 +281,49 @@ def get_song_name(tracks_df,recommended_tracks):
     filtered_tracks = tracks_df[tracks_df['id'].isin(recommended_tracks['id'])]
     return filtered_tracks[['track_name','id']]
 
+def cluster_analysis(tracks_feature_df):
+    x = []
+    y = []
+    z = []
+
+    for i in range(2,50):
+        cluster_tracks_df = clustering_tracks(tracks_feature_df,k=i)
+        x.append(davies_bouldin_score(cluster_tracks_df.drop(columns=['id',]), cluster_tracks_df['cluster']))
+        y.append(silhouette_score(cluster_tracks_df.drop(columns=['id',]), cluster_tracks_df['cluster']))
+        z.append(calinski_harabasz_score(cluster_tracks_df.drop(columns=['id',]), cluster_tracks_df['cluster']))
+
+    # plot the Davies-Bouldin index value in x
+    plt.plot(range(2,50),x)
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Davies-Bouldin index')
+    plt.title('Davies-Bouldin index vs Number of clusters')
+    plt.show()
+
+    # plot the silhouette score value in y
+    plt.plot(range(2,50),y)
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Silhouette score')
+    plt.title('Silhouette score vs Number of clusters')
+    plt.show()
+
+    # plot the Calinski-Harabasz score value in z
+    plt.plot(range(2,50),z)
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Calinski-Harabasz score')
+    plt.title('Calinski-Harabasz score vs Number of clusters')
+    plt.show()
 
 if __name__ == "__main__":
+    # 1. Fetched the tracks features from the Spotify API
+    # 2. Saved the tracks features to a csv file
+    # 3. Clustered the tracks into N clusters using KMeans
+    # 4. Saved the cluster of the tracks to a csv file
+    # 5. Fetched the recommended songs from the same cluster as the given song
 
     # argparse to take song id as input
     parser = argparse.ArgumentParser(description='Get the next song based on the current song')
     parser.add_argument('current_song_id', type=str, help='The id of the song')
+
     # flag to fetch track features 
     parser.add_argument('--dir', type=str, default='../data/', help='The directory of the data')
     parser.add_argument('--create_tracks_feature', action='store_true', help='Create dataframe of the tracks features')
@@ -308,6 +347,7 @@ if __name__ == "__main__":
             tracks_feature_df = get_track_features_in_chunks(tracks_df,chunk_size=100,save=True)
         else : tracks_feature_df = pd.read_csv('../data/tracks_features.csv',header=0)
         cluster_tracks_df = clustering_tracks(tracks_feature_df)
+        cluster_tracks_df.to_csv('../data/tracks_cluster.csv',index=False)
     else : 
         cluster_tracks_df = pd.read_csv('../data/tracks_cluster.csv',header=0)
 

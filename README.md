@@ -98,10 +98,11 @@ This will recommend N songs from the given playlist based on cosine similarity.
 jupyter
 numpy
 pandas
-pillow
 python-dotenv
 seaborn
+scikit-learn
 spotipy
 tqdm
 wordcloud
+pillow
 ```
