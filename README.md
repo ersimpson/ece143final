@@ -53,11 +53,11 @@ Prior to building a recommendation model, we analyzed parts of the dataset to ge
 We considered two major forms of analysis in investigation of the dataset:
 
 1. Basic Descriptive Statistics (Tracks, Playlists, Artists, Albums, etc.)
-2. Clustering Analysis with Text
+2. Clustering Analysis with Audio Features
 
 The basic descriptive statistics include results such as the most popular tracks, artists, albums, etc. as well as some more detailed statistics such as the distribution of playlist lengths. Effectively, this analysis provides a high-level overview of the dataset and serves as a starting point to guide us in asking more interesting and pointed questions about the nature of certain features in the dataset.
 
-On the other hand, the clustering analysis attempts to group playlists and tracks based on their textual data in the anticipation that certain genres or themes for playlists emerge.
+On the other hand, the clustering analysis attempts to group playlists and tracks based on their audio characteristics as provided by the Spotify API in the anticipation that listeners prefer tracks with similar audio features.
 
 #### Viewing the Analysis (Basic Descriptive Statistics)
 
