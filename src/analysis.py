@@ -5,27 +5,73 @@ from tqdm import tqdm
 import numpy as np
 
 from pre_processing import read_pre_processed_data
-from plots import save_bar_plot
+from plots import save_bar_plot, save_audio_features_hist
 from utils import get_spotipy_client
-from recommend_track import fetch_audio_features
 
 
-def get_tracks_audio_features(tracks_df, client_id=None, client_secret=None):
-    """Get audio features for the given tracks.
+def get_top_tracks_audio_features_cmp(
+    topN_audio_df,
+    sampleN_audio_df,
+    N=1000
+):
+    """Get the audio features for the top tracks compared to a random sampling
+    of tracks to compare distributions of audio characteristics.
 
     Args:
-        sp (SpotifyClientCredentials): The Spotify API object.
-        tracks_info (DataFrame): A DataFrame of the unique tracks data.
-        client_id (str): The client id to connect to the Spotify API with.
-        client_secret (str): The client secret to connect to the Spotify API with.
-
+        top1000_audio_df (DataFrame): A DataFrame of the top 1000 tracks data.
+        sample1000_audio_df (DataFrame): A DataFrame of 1000 randomly sampled tracks.
+        N (int): The number of samples to compare distributions for.
+    
     Returns:
-        A DataFrame of the audio features for the tracks in the tracks_info.
+        A DataFrame of the audio features for all of the top tracks and randomly
+        sampled tracks combined together with appropriate labels.
     """
-    sp = get_spotipy_client(client_id, client_secret)
-    tracks_df["track_id"] = tracks_df["track_uri"].apply(lambda x: x.split(":")[-1])
-    tracks_df = tracks_df.reset_index().drop("index", axis=1)
-    return fetch_audio_features(sp, tracks_df)
+    # Join dataframes and label distributions for plotting
+    topN_audio_df["label"] = f"top_{N}"
+    sampleN_audio_df["label"] = f"sample_{N}"
+    hist_df = pd.concat([topN_audio_df, sampleN_audio_df], ignore_index=True)
+    return hist_df
+
+
+def get_top_tracks_cmp(tracks_df, playlists_tracks_df):
+    """Get the top tracks dataframes compared to a random sampling of tracks to
+    compare distributions of audio characteristics.
+
+    Args:
+        tracks_df (DataFrame): A DataFrame of the unique tracks data.
+        playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
+            associations.
+    
+    Returns:
+        The DataFrames of the the top tracks and randomly sampled tracks as a
+        triplet pair.
+    """
+    # Get top 10000 and random sample of 10000 tracks
+    top1000_tracks_df = get_most_common_tracks(tracks_df, playlists_tracks_df, n=1000)
+    top1000_tracks_df = top1000_tracks_df.join(tracks_df, lsuffix="_left")
+    sample1000_tracks_df = tracks_df.sample(1000)
+    return top1000_tracks_df, sample1000_tracks_df
+
+
+def get_top_artists_tracks_cmp(tracks_df, playlists_tracks_df):
+    """Get the tracks of top artists dataframes compared to a random sampling of
+    artist tracks to compare distributions of audio characteristics.
+
+    Args:
+        tracks_df (DataFrame): A DataFrame of the unique tracks data.
+        playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
+            associations.
+    
+    Returns:
+        The DataFrames of the the top tracks and randomly sampled tracks as a
+        tuple pair.
+    """
+    # Get top 10, top 10000, and random sample of 10000 tracks
+    top100_artists_df = get_most_common_artists(tracks_df, playlists_tracks_df, n=100)
+    top100_artists_df = top100_artists_df.join(tracks_df, on="artist_uri", lsuffix="_left")
+    sample100_artists_df = tracks_df.sample(100)
+    sample100_artists_df = sample100_artists_df.join(tracks_df, on="artist_uri", lsuffix="_left")
+    return top100_artists_df, sample100_artists_df
 
 
 def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10, ascending=False):
@@ -47,7 +93,7 @@ def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10, ascending=False)
     assert isinstance(n, int)
     assert n > 0
     df = get_unique_track_features(tracks_df, playlist_tracks_df)
-    return df[["track_name", "count"]].sort_values("count", ascending=ascending)[:n]
+    return df[["track_name", "track_uri", "count"]].sort_values("count", ascending=ascending)[:n]
 
 
 def get_most_common_artists(tracks_df, playlist_tracks_df, n=10, ascending=False):
@@ -74,7 +120,7 @@ def get_most_common_artists(tracks_df, playlist_tracks_df, n=10, ascending=False
     df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["artist_uri", "artist_name"]], on="track_id")
     artists_df = df[["pid", "artist_uri", "artist_name"]].drop_duplicates()
     artists_df = artists_df.value_counts(["artist_uri", "artist_name"]).to_frame().reset_index()
-    return artists_df[["artist_name", "count"]].set_index("artist_name").sort_values("count", ascending=ascending)[:n]
+    return artists_df[["artist_name", "artist_uri", "count"]].set_index("artist_name").sort_values("count", ascending=ascending)[:n]
 
 
 def get_most_common_albums(tracks_df, playlist_tracks_df, n=10, ascending=False):
@@ -101,7 +147,7 @@ def get_most_common_albums(tracks_df, playlist_tracks_df, n=10, ascending=False)
     df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["album_uri", "album_name"]], on="track_id")
     artists_df = df[["pid", "album_uri", "album_name"]].drop_duplicates()
     artists_df = artists_df.value_counts(["album_uri", "album_name"]).to_frame().reset_index()
-    return artists_df[["album_name", "count"]].set_index("album_name").sort_values("count", ascending=ascending)[:n]
+    return artists_df[["album_name", "album_uri", "count"]].set_index("album_name").sort_values("count", ascending=ascending)[:n]
 
 
 def get_largest_albums(tracks_df, playlist_tracks_df, n=10):
@@ -314,3 +360,17 @@ if __name__ == "__main__":
     print(f"Plotting top {N} most prolific artists...")
     top_N_prolific_one_hit = get_most_popular_one_hit_wonder(tracks_df, playlist_tracks_df, n=N)
     save_bar_plot(f"top{N}_prolific_one_hit.png", top_N_prolific_one_hit, x="artist_name", y="popularity", title=f"Top {N} Most Prolific Artists With Only One Track", orient="h")
+
+    # Plot audio characteristic distributions
+    top1000_audio_df = pd.read_csv("top1000_audio_features.csv")
+    sample1000_audio_df = pd.read_csv("sample1000_audio_features.csv")
+    hist_df = get_top_tracks_audio_features_cmp(top1000_audio_df, sample1000_audio_df)
+    save_audio_features_hist("danceability_hist.png", hist_df, x="danceability", title="Danceability of Top 1000 vs. 1000 Random Tracks")
+    save_audio_features_hist("energy_hist.png", hist_df, x="energy", title="Energy of Top 1000 vs. 1000 Random Tracks")
+    save_audio_features_hist("loudness_hist.png", hist_df, x="loudness", title="Loudness of Top 1000 vs. 1000 Random Tracks")
+    save_audio_features_hist("speechiness_hist.png", hist_df, x="speechiness", title="Speechiness of Top 1000 vs. 1000 Random Tracks")
+    save_audio_features_hist("acousticness_hist.png", hist_df, x="acousticness", title="Acousticness of Top 1000 vs. 1000 Random Tracks")
+    save_audio_features_hist("liveness_hist.png", hist_df, x="liveness", title="Liveness of Top 1000 vs. 1000 Random Tracks")
+    save_audio_features_hist("valence_hist.png", hist_df, x="valence", title="Valence of Top 1000 vs. 1000 Random Tracks")
+    save_audio_features_hist("tempo_hist.png", hist_df, x="tempo", title="Tempo of Top 1000 vs. 1000 Random Tracks")
+    save_audio_features_hist("duration_ms.png", hist_df, x="duration_ms", title="Duration of Top 1000 vs. 1000 Random Tracks")
