@@ -159,7 +159,6 @@ def next_song_from_playlist(tracks_df,cluster_tracks_df,track_audio_features, cu
     similar_songs = np.array(similar_songs)
 
     recommended_tracks = pd.DataFrame({
-        'id': similar_songs,
         'track_name' : tracks_df[tracks_df['id'].isin(similar_songs)]['track_name'],
     })
     return recommended_tracks
@@ -267,7 +266,7 @@ def get_recommendation_from_cluster(cluster_tracks_df,tracks_df,track_id, N=10):
     '''
     cluster = get_song_cluster(cluster_tracks_df,track_id)
     recommended_songs = cluster_tracks_df[cluster_tracks_df['cluster'] == cluster]
-    return get_song_name(tracks_df,recommended_songs.sample(N))[['id','track_name']]
+    return get_song_name(tracks_df,recommended_songs.sample(N))[['track_name']]
 
 def get_song_name(tracks_df,recommended_tracks):
     '''
@@ -351,7 +350,7 @@ if __name__ == "__main__":
     else : 
         cluster_tracks_df = pd.read_csv('../data/tracks_cluster.csv',header=0)
 
-    print(f"{N} track recommendations for track name: ",tracks_df[tracks_df['id'] == current_song_id]['track_name'].values[0])
+    print(f"Recommended songs for ",tracks_df[tracks_df['id'] == current_song_id]['track_name'].values[0])
     if playlist_id : 
         # Reccommend next song to the song from playlist
         track_audio_features = playlist_track_features(tracks_df, playlist_tracks_df, playlist_id)
