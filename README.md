@@ -65,7 +65,7 @@ On the other hand, the clustering analysis attempts to group playlists and track
 
 1. Run `python3 analysis.py [directory of pre processed data] -N 10`.
 
-These will produce bar plots to answer the following questions:
+These will produce bar plots and histograms to answer the following questions:
 
 - What are the most popular tracks across all playlists?
 - What are the most popular artists across all playlists?
@@ -73,6 +73,7 @@ These will produce bar plots to answer the following questions:
 - What artists are the most prolific in terms of number of tracks?
 - What artists are the most prolific in terms of number of albums?
 - What albums contain the most tracks?
+- How do the audio characteristics of popular tracks differ from just average (random) tracks?
 
 ### Recommendation
 
