@@ -3,12 +3,80 @@ import sys
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
+from spotipy.oauth2 import SpotifyClientCredentials
+import spotipy
 
 from pre_processing import read_pre_processed_data
 from plots import save_bar_plot
 
 
-def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10):
+def get_tracks_audio_features(tracks_df, client_id=None, client_secret=None):
+    """
+    """
+    if client_id is None and client_secret is None:
+        # load credentials from the .env file
+        assert load_dotenv(), "no enviromental variables found!"
+        client_id = os.environ["SPOTIFY_CLIENT_ID"]
+        client_secret = os.environ["SPOTIFY_CLIENT_SECRET"]
+
+    sp = spotipy.Spotify(
+        auth_manager=SpotifyClientCredentials(
+            client_id=client_id,
+            client_secret=client_secret,
+        ),
+    )
+    tracks_df["track_id"] = tracks_df["track_uri"].apply(lambda x: x.split(":")[-1])
+    tracks_df = tracks_df.reset_index().drop("index", axis=1)
+    return fetch_audio_features(sp, tracks_df)
+
+
+def fetch_audio_features(sp, tracks_name_df):
+    """
+    """
+    playlist = tracks_name_df
+    index = 0
+    audio_features = []
+    
+    while index < playlist.shape[0]:
+        audio_features += sp.audio_features(playlist.iloc[index:index + 50]["track_uri"])
+        index += 50
+
+    features_list = []
+    for features in audio_features:
+        features_list.append([
+            features["id"],
+            tracks_name_df[tracks_name_df["track_id"] == features["id"]]["track_name"].values[0],
+            features["danceability"],
+            features["energy"],
+            features["tempo"],
+            features["loudness"],
+            features["valence"],
+            features["speechiness"],
+            features["instrumentalness"],
+            features["liveness"],
+            features["acousticness"],
+        ])
+    
+    df_audio_features = pd.DataFrame(
+        features_list,
+        columns=[
+            "track_id",
+            "track_name",
+            "danceability",
+            "energy",
+            "tempo",
+            "loudness",
+            "valence",
+            "speechiness",
+            "instrumentalness",
+            "liveness",
+            "acousticness",
+        ])
+    df_audio_features.set_index("track_id", inplace=True, drop=True)
+    return df_audio_features
+
+
+def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10, ascending=False):
     """Get the most included tracks across all playlists.
 
     Args:
@@ -16,6 +84,8 @@ def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10):
         playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
             associations.
         n (int): The number of tracks to include in the returning DataFrame.
+        ascending (bool): Return the top N most common tracks or bottom N most common
+            (rareset) tracks.
 
     Returns:
         A DataFrame of the most common tracks.
@@ -25,10 +95,10 @@ def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10):
     assert isinstance(n, int)
     assert n > 0
     df = get_unique_track_features(tracks_df, playlist_tracks_df)
-    return df[["track_name", "count"]].sort_values("count", ascending=False)[:n]
+    return df[["track_name", "count"]].sort_values("count", ascending=ascending)[:n]
 
 
-def get_most_common_artists(tracks_df, playlist_tracks_df, n=10):
+def get_most_common_artists(tracks_df, playlist_tracks_df, n=10, ascending=False):
     """Get the artists that have the most unique inclusions across all playlists.
 
     A unique inclusion deduplicates an artist that has been added multiple
@@ -39,6 +109,8 @@ def get_most_common_artists(tracks_df, playlist_tracks_df, n=10):
         playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
             associations.
         n (int): The number of artists to include in the returning DataFrame.
+        ascending (bool): Return the top N most common artists or bottom N most common
+            (rareset) artists.
 
     Returns:
         A DataFrame of the most common artists.
@@ -50,10 +122,10 @@ def get_most_common_artists(tracks_df, playlist_tracks_df, n=10):
     df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["artist_uri", "artist_name"]], on="track_id")
     artists_df = df[["pid", "artist_uri", "artist_name"]].drop_duplicates()
     artists_df = artists_df.value_counts(["artist_uri", "artist_name"]).to_frame().reset_index()
-    return artists_df[["artist_name", "count"]].set_index("artist_name").sort_values("count", ascending=False)[:n]
+    return artists_df[["artist_name", "count"]].set_index("artist_name").sort_values("count", ascending=ascending)[:n]
 
 
-def get_most_common_albums(tracks_df, playlist_tracks_df, n=10):
+def get_most_common_albums(tracks_df, playlist_tracks_df, n=10, ascending=False):
     """Get the albums that have the most unique inclusions across all playlists.
 
     A unique inclusion deduplicates an album that has been added multiple
@@ -64,6 +136,8 @@ def get_most_common_albums(tracks_df, playlist_tracks_df, n=10):
         playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
             associations.
         n (int): The number of albums to include in the returning DataFrame.
+        ascending (bool): Return the top N most common albums or bottom N most common
+            (rareset) albums.
 
     Returns:
         A DataFrame of the most common albums.
@@ -75,7 +149,7 @@ def get_most_common_albums(tracks_df, playlist_tracks_df, n=10):
     df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["album_uri", "album_name"]], on="track_id")
     artists_df = df[["pid", "album_uri", "album_name"]].drop_duplicates()
     artists_df = artists_df.value_counts(["album_uri", "album_name"]).to_frame().reset_index()
-    return artists_df[["album_name", "count"]].set_index("album_name").sort_values("count", ascending=False)[:n]
+    return artists_df[["album_name", "count"]].set_index("album_name").sort_values("count", ascending=ascending)[:n]
 
 
 def get_largest_albums(tracks_df, playlist_tracks_df, n=10):

@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 
-def get_info(uri, uri_type):
+def get_info(uri, uri_type, client_id=None, client_secret=None):
     '''
     Extracts information about Spotify track(s)/artist(s)/album(s)
     given its(their) URI(s).
@@ -22,13 +22,16 @@ def get_info(uri, uri_type):
     assert isinstance(uri, (list, str))
     assert isinstance(uri_type, str) and uri_type in acceptable_types
 
-    # load credentials from the .env file
-    assert load_dotenv(), "no enviromental variables found!"
+    if client_id is None and client_secret is None:
+        # load credentials from the .env file
+        assert load_dotenv(), "no enviromental variables found!"
+        client_id = os.environ["SPOTIFY_CLIENT_ID"]
+        client_secret = os.environ["SPOTIFY_CLIENT_SECRET"]
 
     # create spotify obj
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-        client_id=os.environ['SPOTIFY_CLIENT_ID'],
-        client_secret=os.environ['SPOTIFY_CLIENT_SECRET']
+        client_id=client_id,
+        client_secret=client_secret
     ))
 
     # generate fetch func
