@@ -5,3 +5,6 @@ spotify_million_playlist_dataset.zip
 src/__pycache__/
 **/.ipynb_checkpoints/**
 **/*.png
+src/.env
+.env
+src/.cache

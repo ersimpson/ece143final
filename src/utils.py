@@ -4,32 +4,50 @@ import os
 from dotenv import load_dotenv
 
 
-def get_info(uri, uri_type):
-    '''
-    Extracts information about Spotify track(s)/artist(s)/album(s)
+def get_spotipy_client(client_id=None, client_secret=None):
+    """Get the spotipy client to access the Spotify API with.
+
+    Args:
+        client_id (str): The client id to connect to the Spotify API with.
+        client_secret (str): The client secret to connect to the Spotify API with.
+
+    Returns:
+        A spotipy client.
+    """
+    if client_id is None and client_secret is None:
+        # load credentials from the .env file
+        assert load_dotenv(), "no enviromental variables found!"
+        client_id = os.environ["SPOTIFY_CLIENT_ID"]
+        client_secret = os.environ["SPOTIFY_CLIENT_SECRET"]
+
+    # create spotify obj
+    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+        client_id=client_id,
+        client_secret=client_secret
+    ))
+    return sp
+
+
+def get_info(uri, uri_type, client_id=None, client_secret=None):
+    """Extracts information about Spotify track(s)/artist(s)/album(s)
     given its(their) URI(s).
     Maximum of 50 URIs could be handled at the same time.
 
     Args:
         uri(str/list): The Spotify track/artist/album URI(s)
         uri_type(str): The type of URI, either "track", "artist", or "album"
+        client_id (str): The client id to connect to the Spotify API with.
+        client_secret (str): The client secret to connect to the Spotify API with.
 
     Returns:
         dict/list: A (list of) dictionary with the track/artist/album info,
                    or None if an error occurs.
-    '''
+    """
     acceptable_types = ("track", "artist", "album")
     assert isinstance(uri, (list, str))
     assert isinstance(uri_type, str) and uri_type in acceptable_types
 
-    # load credentials from the .env file
-    assert load_dotenv(), "no enviromental variables found!"
-
-    # create spotify obj
-    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-        client_id=os.environ['SPOTIFY_CLIENT_ID'],
-        client_secret=os.environ['SPOTIFY_CLIENT_SECRET']
-    ))
+    sp = get_spotipy_client(client_id, client_secret)
 
     # generate fetch func
     fetch_funcs = (sp.track, sp.artist, sp.album)

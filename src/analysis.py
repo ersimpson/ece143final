@@ -6,9 +6,29 @@ import numpy as np
 
 from pre_processing import read_pre_processed_data
 from plots import save_bar_plot
+from utils import get_spotipy_client
+from recommend_track import fetch_audio_features
 
 
-def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10):
+def get_tracks_audio_features(tracks_df, client_id=None, client_secret=None):
+    """Get audio features for the given tracks.
+
+    Args:
+        sp (SpotifyClientCredentials): The Spotify API object.
+        tracks_info (DataFrame): A DataFrame of the unique tracks data.
+        client_id (str): The client id to connect to the Spotify API with.
+        client_secret (str): The client secret to connect to the Spotify API with.
+
+    Returns:
+        A DataFrame of the audio features for the tracks in the tracks_info.
+    """
+    sp = get_spotipy_client(client_id, client_secret)
+    tracks_df["track_id"] = tracks_df["track_uri"].apply(lambda x: x.split(":")[-1])
+    tracks_df = tracks_df.reset_index().drop("index", axis=1)
+    return fetch_audio_features(sp, tracks_df)
+
+
+def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10, ascending=False):
     """Get the most included tracks across all playlists.
 
     Args:
@@ -16,6 +36,8 @@ def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10):
         playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
             associations.
         n (int): The number of tracks to include in the returning DataFrame.
+        ascending (bool): Return the top N most common tracks or bottom N most common
+            (rareset) tracks.
 
     Returns:
         A DataFrame of the most common tracks.
@@ -25,10 +47,10 @@ def get_most_common_tracks(tracks_df, playlist_tracks_df, n=10):
     assert isinstance(n, int)
     assert n > 0
     df = get_unique_track_features(tracks_df, playlist_tracks_df)
-    return df[["track_name", "count"]].sort_values("count", ascending=False)[:n]
+    return df[["track_name", "count"]].sort_values("count", ascending=ascending)[:n]
 
 
-def get_most_common_artists(tracks_df, playlist_tracks_df, n=10):
+def get_most_common_artists(tracks_df, playlist_tracks_df, n=10, ascending=False):
     """Get the artists that have the most unique inclusions across all playlists.
 
     A unique inclusion deduplicates an artist that has been added multiple
@@ -39,6 +61,8 @@ def get_most_common_artists(tracks_df, playlist_tracks_df, n=10):
         playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
             associations.
         n (int): The number of artists to include in the returning DataFrame.
+        ascending (bool): Return the top N most common artists or bottom N most common
+            (rareset) artists.
 
     Returns:
         A DataFrame of the most common artists.
@@ -50,10 +74,10 @@ def get_most_common_artists(tracks_df, playlist_tracks_df, n=10):
     df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["artist_uri", "artist_name"]], on="track_id")
     artists_df = df[["pid", "artist_uri", "artist_name"]].drop_duplicates()
     artists_df = artists_df.value_counts(["artist_uri", "artist_name"]).to_frame().reset_index()
-    return artists_df[["artist_name", "count"]].set_index("artist_name").sort_values("count", ascending=False)[:n]
+    return artists_df[["artist_name", "count"]].set_index("artist_name").sort_values("count", ascending=ascending)[:n]
 
 
-def get_most_common_albums(tracks_df, playlist_tracks_df, n=10):
+def get_most_common_albums(tracks_df, playlist_tracks_df, n=10, ascending=False):
     """Get the albums that have the most unique inclusions across all playlists.
 
     A unique inclusion deduplicates an album that has been added multiple
@@ -64,6 +88,8 @@ def get_most_common_albums(tracks_df, playlist_tracks_df, n=10):
         playlist_tracks_df (DataFrame): A DataFrame of the playlist and track id
             associations.
         n (int): The number of albums to include in the returning DataFrame.
+        ascending (bool): Return the top N most common albums or bottom N most common
+            (rareset) albums.
 
     Returns:
         A DataFrame of the most common albums.
@@ -75,7 +101,7 @@ def get_most_common_albums(tracks_df, playlist_tracks_df, n=10):
     df = playlist_tracks_df.join(tracks_df.set_index("track_id")[["album_uri", "album_name"]], on="track_id")
     artists_df = df[["pid", "album_uri", "album_name"]].drop_duplicates()
     artists_df = artists_df.value_counts(["album_uri", "album_name"]).to_frame().reset_index()
-    return artists_df[["album_name", "count"]].set_index("album_name").sort_values("count", ascending=False)[:n]
+    return artists_df[["album_name", "count"]].set_index("album_name").sort_values("count", ascending=ascending)[:n]
 
 
 def get_largest_albums(tracks_df, playlist_tracks_df, n=10):
