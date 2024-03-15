@@ -209,6 +209,36 @@ def get_artist_diversity_distribution(tracks_df, playlist_tracks_df):
 
     return artist_diversity
 
+def get_most_popular_one_hit_wonder(tracks_df, playlist_tracks_df, n=10):
+    """
+    Find artists with a low number of tracks but high popularity based on the number of inclusions across all playlists.
+
+    Args:
+        tracks_df (DataFrame): DataFrame of the unique tracks data.
+        playlist_tracks_df (DataFrame): DataFrame of the playlist and track id associations.
+        threshold_tracks (int): Threshold for the number of tracks below which an artist is considered to have a low track count.
+        threshold_popularity (int): Threshold for the popularity based on the number of inclusions across all playlists.
+
+    Returns:
+        DataFrame: DataFrame of artists that meet the criteria.
+    """
+    assert isinstance(tracks_df, pd.DataFrame)
+    assert isinstance(playlist_tracks_df, pd.DataFrame)
+    assert isinstance(n, int)
+    assert n > 0
+    
+    merged_df = pd.merge(playlist_tracks_df, tracks_df[['track_id', 'artist_name']], on='track_id')
+    artist_track_counts = merged_df.groupby('artist_name')['track_id'].nunique().reset_index()
+    artist_track_counts.columns = ['artist_name', 'track_count']
+    artist_popularity = merged_df['artist_name'].value_counts().reset_index()
+    artist_popularity.columns = ['artist_name', 'popularity']
+    artist_stats = pd.merge(artist_track_counts, artist_popularity, on='artist_name')
+    popular_one_hit_wonders = artist_stats[
+        (artist_stats['track_count'] <= 1) & (artist_stats['popularity'] >= 1000)
+    ]
+    top_n_one_hit_wonders = popular_one_hit_wonders.sort_values(by='popularity', ascending=False).head(n)
+    return top_n_one_hit_wonders
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -252,3 +282,8 @@ if __name__ == "__main__":
     print(f"Plotting top {N} largest albums...")
     top_N_largest_albums = get_largest_albums(tracks_df, playlist_tracks_df, n=N)
     save_bar_plot(f"top{N}_largest_albums.png", top_N_largest_albums, x="album_name", y="count", title=f"Top {N} Largest Albums", orient="h")
+    
+    # Plot top N prolific artists with only one track
+    print(f"Plotting top {N} most prolific artists...")
+    top_N_prolific_one_hit = get_most_popular_one_hit_wonder(tracks_df, playlist_tracks_df, n=N)
+    save_bar_plot(f"top{N}_prolific_one_hit.png", top_N_prolific_one_hit, x="artist_name", y="popularity", title=f"Top {N} Most Prolific Artists With Only One Track", orient="h")
