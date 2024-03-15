@@ -50,3 +50,21 @@ These will produce bar plots to answer the following questions:
 - What artists are the most prolific in terms of number of tracks?
 - What artists are the most prolific in terms of number of albums?
 - What albums contain the most tracks?
+
+### Recommendation
+
+In our recommendation model, we implemented the K-means clustering algorithm to group tracks based on attributes such as danceability, energy, loudness, speechiness, acousticness, instrumentalness, liveness, valence, and tempo. Songs residing in the same cluster as the current track were suggested for sequential playback.
+
+For recommendations from a given playlist, we utilized cosine similarity to compare the current song against the rest in the playlist. This approach helped in identifying and recommending the next song to play from the playlist
+
+#### Recommendation of tracks
+
+*Note: the pre-processing step must be completed before running the analysis*
+
+1. Run `python3 recommend_tracks.py [current_song] --dir [directory of pre processed data] -N 10 `.
+
+This will recommend N songs from the same K-means cluster as the current song.
+
+2. Run `python3 recommend_tracks.py [current_song] --dir [directory of pre processed data] -N 10 --playlist_id <value>`.
+
+This will recommend N songs from the given playlist based on cosine similarity.
