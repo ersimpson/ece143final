@@ -3,7 +3,7 @@ import pandas as pd
 import seaborn as sns
 
 
-def save_bar_plot(filename, df, x, y, title, orient="v"):
+def save_bar_plot(filename, df, x, y, title, orient="v", save = "y"):
     """Create a bar plot from a dataframe and save to disk as a png.
 
     Args:
@@ -26,6 +26,8 @@ def save_bar_plot(filename, df, x, y, title, orient="v"):
     assert isinstance(title, str)
     assert isinstance(orient, str)
     assert orient in ("h", "v")
+    assert isinstance(save, str)
+    assert save in ("y", "n")
     
     df = df.reset_index()
 
@@ -52,5 +54,8 @@ def save_bar_plot(filename, df, x, y, title, orient="v"):
         for bar in ax.containers:
             ax.bar_label(bar)
         sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))  
-        plt.savefig(filename, bbox_inches="tight")
-        plt.close()
+        if save == "y":
+            plt.savefig(filename, bbox_inches="tight")
+            plt.close()
+        else:
+            plt.show()
